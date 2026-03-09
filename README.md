@@ -29,7 +29,7 @@ The script has **no dependencies** and is optimized to avoid unnecessary process
 Include the script in your page.
 
 ```html
-<script src="input-number-format-keyup.optimized.js"></script>
+<script src="input-number-format-keyup.js"></script>
 ```
 
 No initialization required.
