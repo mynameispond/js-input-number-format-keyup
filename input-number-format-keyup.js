@@ -1,199 +1,295 @@
 (function () {
-	var SELECTOR = ".input-number-format-keyup";
-	var DEFAULT_DECIMAL = 2;
+	const SELECTOR = ".input-number-format-keyup";
+	const DEFAULT_DECIMAL = 2;
 
-	function matchesSelector(el, selector) {
-		return el && el.matches && el.matches(selector);
+	function getDecimalPlaces(el) {
+		let v = parseInt(el.dataset.decimal, 10);
+		return isNaN(v) ? DEFAULT_DECIMAL : Math.max(0, v);
 	}
 
-	function getDecimalPlaces(input) {
-		var decimal = parseInt(input.getAttribute("data-decimal"), 10);
+	function getMin(el) {
+		let v = parseFloat(el.dataset.min);
+		return isNaN(v) ? null : v;
+	}
 
-		if (isNaN(decimal) || decimal < 0) {
-			decimal = DEFAULT_DECIMAL;
+	function getMax(el) {
+		let v = parseFloat(el.dataset.max);
+		return isNaN(v) ? null : v;
+	}
+
+	function getStep(el) {
+		let v = parseFloat(el.dataset.step);
+		return isNaN(v) || v <= 0 ? null : v;
+	}
+
+	function allowNegative(el) {
+		return el.dataset.allowNegative !== "0";
+	}
+
+	function countStepDecimals(step) {
+		if (!step) return 0;
+		const s = String(step);
+		if (s.indexOf("e-") > -1) {
+			return parseInt(s.split("e-")[1], 10) || 0;
 		}
-
-		return decimal;
+		const parts = s.split(".");
+		return parts[1] ? parts[1].length : 0;
 	}
 
-	function sanitizeNumberInput(value, decimalPlaces) {
+	function sanitize(value, decimal, allowNeg) {
 		value = String(value || "");
 
-		// เหลือเฉพาะ 0-9 . -
-		value = value.replace(/[^0-9.-]/g, "");
+		// เหลือเฉพาะตัวที่อนุญาต
+		value = value.replace(/[^0-9.\-]/g, "");
+
+		if (!allowNeg) {
+			value = value.replace(/\-/g, "");
+		}
 
 		// อนุญาต - ได้เฉพาะตัวแรก
 		value = value.replace(/(?!^)-/g, "");
 
 		// ถ้าไม่ให้มีทศนิยม ตัด . ออกทั้งหมด
-		if (decimalPlaces <= 0) {
+		if (decimal === 0) {
 			value = value.replace(/\./g, "");
 			return value;
 		}
 
 		// อนุญาต . ได้แค่ตัวเดียว
-		var firstDotIndex = value.indexOf(".");
-		if (firstDotIndex !== -1) {
+		const dot = value.indexOf(".");
+		if (dot !== -1) {
 			value =
-				value.substring(0, firstDotIndex + 1) +
-				value.substring(firstDotIndex + 1).replace(/\./g, "");
+				value.substring(0, dot + 1) +
+				value.substring(dot + 1).replace(/\./g, "");
 		}
 
 		return value;
 	}
 
-	function addCommaToInteger(intPart) {
-		return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	function sanitizePastedText(text, decimal, allowNeg) {
+		text = String(text || "").trim();
+
+		// รองรับการ paste จาก Excel / multi-cell:
+		// เอาค่า cell แรกสุดมาก่อน
+		text = text.split(/\r?\n/)[0];
+		text = text.split("\t")[0];
+
+		// ลบ space
+		text = text.replace(/\s+/g, "");
+
+		// รองรับกรณีมี comma คั่นหลักพัน หรือมีข้อความปน
+		// เหลือเฉพาะ 0-9 . - ,
+		text = text.replace(/[^0-9,.\-]/g, "");
+
+		// heuristic:
+		// - ถ้ามีทั้ง , และ . => ถือว่า , เป็น thousands separator แล้วลบทิ้ง
+		// - ถ้ามีแต่ , และไม่มี . :
+		//      ถ้ามี , ตัวเดียว และด้านหลังยาว <= decimal และ decimal > 0
+		//      ให้มองว่าเป็น decimal separator เช่น 12,5 -> 12.5
+		//      นอกนั้นถือว่าเป็น thousands separator แล้วลบทิ้ง
+		const hasComma = text.indexOf(",") !== -1;
+		const hasDot = text.indexOf(".") !== -1;
+
+		if (hasComma && hasDot) {
+			text = text.replace(/,/g, "");
+		} else if (hasComma && !hasDot) {
+			const commaCount = (text.match(/,/g) || []).length;
+
+			if (commaCount === 1 && decimal > 0) {
+				const parts = text.split(",");
+				const right = parts[1] || "";
+
+				if (right.length > 0 && right.length <= decimal) {
+					text = parts[0] + "." + right;
+				} else {
+					text = text.replace(/,/g, "");
+				}
+			} else {
+				text = text.replace(/,/g, "");
+			}
+		}
+
+		return sanitize(text, decimal, allowNeg);
 	}
 
-	function normalizeIntegerPart(intPart) {
-		intPart = intPart || "0";
-		intPart = intPart.replace(/^0+(?=\d)/, "");
-		return intPart;
+	function comma(x) {
+		return x.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 	}
 
-	function formatNumberForTyping(raw, decimalPlaces) {
+	function normalizeInt(x) {
+		x = x || "0";
+		return x.replace(/^0+(?=\d)/, "");
+	}
+
+	function formatTyping(raw, decimal) {
 		if (!raw || raw === "-" || raw === "." || raw === "-.") {
 			return raw;
 		}
 
-		var isNegative = raw.charAt(0) === "-";
-		if (isNegative) {
-			raw = raw.substring(1);
+		const neg = raw[0] === "-";
+		if (neg) raw = raw.substring(1);
+
+		const parts = raw.split(".");
+		let intPart = comma(normalizeInt(parts[0]));
+		let dec = parts[1] || "";
+
+		if (dec.length > decimal) {
+			dec = dec.substring(0, decimal);
 		}
 
-		var hasDot = raw.indexOf(".") !== -1;
-		var parts = raw.split(".");
-		var intPart = normalizeIntegerPart(parts[0]);
-		var decPart = parts.length > 1 ? parts[1] : "";
+		let out = neg ? "-" + intPart : intPart;
 
-		intPart = addCommaToInteger(intPart);
-
-		if (decimalPlaces <= 0) {
-			decPart = "";
-			hasDot = false;
-		} else if (decPart.length > decimalPlaces) {
-			decPart = decPart.substring(0, decimalPlaces);
+		if (raw.includes(".") && decimal > 0) {
+			out += "." + dec;
 		}
 
-		var result = isNegative ? "-" + intPart : intPart;
-
-		if (hasDot && decimalPlaces > 0) {
-			result += "." + decPart;
-		}
-
-		return result;
+		return out;
 	}
 
-	function formatNumberForBlur(raw, decimalPlaces) {
+	function roundToStep(num, step, min) {
+		if (!step || !isFinite(num)) return num;
+
+		const base = min !== null ? min : 0;
+		const ratio = (num - base) / step;
+		const snapped = Math.round(ratio) * step + base;
+
+		const precision = Math.max(countStepDecimals(step), 10);
+		return parseFloat(snapped.toFixed(precision));
+	}
+
+	function clamp(num, min, max) {
+		if (min !== null && num < min) num = min;
+		if (max !== null && num > max) num = max;
+		return num;
+	}
+
+	function formatBlur(raw, decimal, min, max, step) {
 		if (!raw || raw === "-" || raw === "." || raw === "-.") {
 			return "";
 		}
 
-		var isNegative = raw.charAt(0) === "-";
-		if (isNegative) {
-			raw = raw.substring(1);
-		}
-
 		raw = raw.replace(/,/g, "");
 
-		if (!raw || isNaN(raw)) {
-			return "";
+		let num = parseFloat(raw);
+		if (isNaN(num)) return "";
+
+		// clamp ก่อนรอบแรก
+		num = clamp(num, min, max);
+
+		// snap ตาม step
+		if (step) {
+			num = roundToStep(num, step, min);
+			num = clamp(num, min, max);
 		}
 
-		var num = parseFloat(raw);
-		if (isNaN(num)) {
-			return "";
+		const fixed = num.toFixed(decimal);
+		const parts = fixed.split(".");
+
+		let out = comma(parts[0]);
+
+		if (decimal > 0) {
+			out += "." + parts[1];
 		}
 
-		var fixed = num.toFixed(decimalPlaces);
-		var parts = fixed.split(".");
-		var intPart = addCommaToInteger(parts[0]);
-		var result = (num < 0 || (isNegative && num !== 0) ? "-" : "") + intPart;
-
-		if (decimalPlaces > 0) {
-			result += "." + (parts[1] || "").padEnd(decimalPlaces, "0");
-		}
-
-		return result;
+		return out;
 	}
 
-	function countValidCharsBeforeCursor(value, cursorPos) {
-		var left = value.substring(0, cursorPos);
-		return left.replace(/[^0-9.-]/g, "").length;
+	function countValid(str, pos) {
+		return str.substring(0, pos).replace(/[^0-9.\-]/g, "").length;
 	}
 
-	function findCursorPosFromValidCharCount(formattedValue, validCharCount) {
-		if (validCharCount <= 0) {
-			return 0;
+	function cursorFromCount(str, count) {
+		if (count <= 0) return 0;
+
+		let c = 0;
+		for (let i = 0; i < str.length; i++) {
+			if (/[0-9.\-]/.test(str[i])) c++;
+			if (c >= count) return i + 1;
 		}
-
-		var count = 0;
-		for (var i = 0; i < formattedValue.length; i++) {
-			if (/[0-9.-]/.test(formattedValue.charAt(i))) {
-				count++;
-			}
-
-			if (count >= validCharCount) {
-				return i + 1;
-			}
-		}
-
-		return formattedValue.length;
+		return str.length;
 	}
 
-	function handleTyping(input) {
-		var decimalPlaces = getDecimalPlaces(input);
-		var oldValue = input.value;
-		var oldCursor = input.selectionStart || 0;
+	function insertTextAtCursor(el, text) {
+		const start = el.selectionStart || 0;
+		const end = el.selectionEnd || 0;
+		const oldValue = el.value || "";
 
-		var validCharCount = countValidCharsBeforeCursor(oldValue, oldCursor);
-		var sanitized = sanitizeNumberInput(oldValue, decimalPlaces);
-		var formatted = formatNumberForTyping(sanitized, decimalPlaces);
+		el.value = oldValue.slice(0, start) + text + oldValue.slice(end);
 
-		input.value = formatted;
-
-		var newCursor = findCursorPosFromValidCharCount(
-			formatted,
-			validCharCount,
-		);
-
+		const pos = start + text.length;
 		try {
-			input.setSelectionRange(newCursor, newCursor);
+			el.setSelectionRange(pos, pos);
 		} catch (e) {}
 	}
 
-	function handleBlur(input) {
-		var decimalPlaces = getDecimalPlaces(input);
-		var raw = sanitizeNumberInput(input.value, decimalPlaces);
-		input.value = formatNumberForBlur(raw, decimalPlaces);
+	function typing(el) {
+		const decimal = getDecimalPlaces(el);
+		const allowNeg = allowNegative(el);
+
+		const old = el.value;
+		const cursor = el.selectionStart || 0;
+		const count = countValid(old, cursor);
+
+		const raw = sanitize(old, decimal, allowNeg);
+		const formatted = formatTyping(raw, decimal);
+
+		el.value = formatted;
+
+		const newCursor = cursorFromCount(formatted, count);
+
+		try {
+			el.setSelectionRange(newCursor, newCursor);
+		} catch (e) {}
+	}
+
+	function blurFormat(el) {
+		const decimal = getDecimalPlaces(el);
+		const min = getMin(el);
+		const max = getMax(el);
+		const step = getStep(el);
+		const allowNeg = allowNegative(el);
+
+		const raw = sanitize(el.value, decimal, allowNeg);
+		el.value = formatBlur(raw, decimal, min, max, step);
 	}
 
 	document.addEventListener("input", function (e) {
-		var target = e.target;
-		if (!matchesSelector(target, SELECTOR)) {
-			return;
+		if (e.target.matches(SELECTOR)) {
+			typing(e.target);
 		}
-		handleTyping(target);
 	});
 
 	document.addEventListener("keyup", function (e) {
-		var target = e.target;
-		if (!matchesSelector(target, SELECTOR)) {
-			return;
+		if (e.target.matches(SELECTOR)) {
+			typing(e.target);
 		}
-		handleTyping(target);
 	});
 
 	document.addEventListener(
 		"blur",
 		function (e) {
-			var target = e.target;
-			if (!matchesSelector(target, SELECTOR)) {
-				return;
+			if (e.target.matches(SELECTOR)) {
+				blurFormat(e.target);
 			}
-			handleBlur(target);
 		},
 		true,
 	);
+
+	document.addEventListener("paste", function (e) {
+		const el = e.target;
+		if (!el.matches(SELECTOR)) return;
+
+		e.preventDefault();
+
+		const decimal = getDecimalPlaces(el);
+		const allowNeg = allowNegative(el);
+
+		const clipboard = e.clipboardData || window.clipboardData;
+		const pastedText = clipboard ? clipboard.getData("text") : "";
+
+		const cleaned = sanitizePastedText(pastedText, decimal, allowNeg);
+
+		insertTextAtCursor(el, cleaned);
+		typing(el);
+	});
 })();
