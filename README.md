@@ -1,258 +1,209 @@
-# Input Number Format Keyup (Vanilla JS)
+﻿# Input Number Format Keyup (Vanilla JS)
 
-A lightweight JavaScript utility that formats numeric input automatically while typing.
+สคริปต์ JavaScript ขนาดเล็กสำหรับจัดรูปแบบตัวเลขใน `<input>` อัตโนมัติระหว่างพิมพ์  
+เช่น ใส่ comma หลักพัน, คุมจำนวนทศนิยม, และปรับค่าตามเงื่อนไขที่กำหนด
 
-It adds thousands separators, controls decimal precision, preserves cursor position, and supports dynamically created inputs (e.g., AJAX).
-
-The script has **no dependencies** and is optimized to avoid unnecessary processing.
-
----
-
-# Features
-
-* Pure **Vanilla JavaScript**
-* Automatic **thousands separator** (`1,000,000`)
-* Configurable **decimal precision**
-* Cursor position **preserved while typing**
-* Works with **dynamic inputs (AJAX)**
-* **Paste auto-clean**
-* Supports **Ctrl+V from Excel**
-* Optional **min / max validation**
-* Optional **step rounding**
-* Optional **disable negative numbers**
-* Supports **Ctrl+A / Ctrl+C / Ctrl+X**
+จุดเด่นคือใช้ได้ทันที ไม่ต้องติดตั้งไลบรารีเพิ่ม และรองรับ input ที่สร้างทีหลัง (เช่นจาก AJAX)
 
 ---
 
-# Installation
+## สิ่งที่ได้ทันทีเมื่อใช้งาน
 
-Include the script in your page.
+- จัด comma หลักพันอัตโนมัติ (`1000000` -> `1,000,000`)
+- ควบคุมจำนวนทศนิยมได้
+- รักษาตำแหน่งเคอร์เซอร์ขณะพิมพ์
+- วางข้อมูล (Paste) แล้วทำความสะอาดข้อความให้อัตโนมัติ
+- รองรับการวางค่าจาก Excel
+- รองรับ input ที่ถูกเพิ่มเข้ามาแบบ dynamic
+- ตั้งค่า `min`, `max`, `step`, และเปิด/ปิดค่าติดลบได้
+
+---
+
+## เริ่มใช้งานแบบเร็ว (มือใหม่)
+
+### 1) ใส่ไฟล์สคริปต์ในหน้าเว็บ
 
 ```html
 <script src="input-number-format-keyup.js"></script>
 ```
 
-No initialization required.
-
----
-
-# Basic Usage
-
-Add the class to your input.
+### 2) ใส่ class ให้ input ที่ต้องการ
 
 ```html
 <input type="text" class="input-number-format-keyup">
 ```
 
-Example behavior:
+### 3) ลองพิมพ์ตัวเลข
 
-```
-1000 → 1,000.00
-```
+- ตอนพิมพ์ `1000` จะเห็นเป็น `1,000`
+- ตอนออกจากช่อง (blur) จะเป็น `1,000.00` (ค่าเริ่มต้นทศนิยม 2 ตำแหน่ง)
 
----
-
-# Configuration (HTML Attributes)
-
-All configuration is done using HTML `data-*` attributes.
+เสร็จแล้ว ใช้งานได้เลยโดยไม่ต้องเขียนโค้ดเริ่มต้นเพิ่ม
 
 ---
 
-# Decimal Places
-
-Default: **2**
+## ตัวอย่างพร้อมใช้งาน
 
 ```html
-<input class="input-number-format-keyup" data-decimal="1">
-```
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Input Number Format Demo</title>
+</head>
+<body>
+  <label>จำนวนเงิน</label>
+  <input type="text" class="input-number-format-keyup">
 
-Example:
-
-```
-1000.5 → 1,000.5
-```
-
-Disable decimals:
-
-```html
-<input class="input-number-format-keyup" data-decimal="0">
-```
-
----
-
-# Minimum / Maximum Value
-
-```html
-<input
-class="input-number-format-keyup"
-data-min="0"
-data-max="1000">
-```
-
-Values outside the range will be clamped on blur.
-
-Example:
-
-```
-2000 → 1,000.00
+  <script src="input-number-format-keyup.js"></script>
+</body>
+</html>
 ```
 
 ---
 
-# Step Rounding
+## การตั้งค่าเพิ่มเติม (ผ่าน `data-*`)
 
-Round values to the nearest step when leaving the input.
+ถ้าไม่ใส่ค่าใดๆ ระบบจะใช้ค่าเริ่มต้นให้อัตโนมัติ
 
-```html
-<input
-class="input-number-format-keyup"
-data-step="0.25"
-data-decimal="2">
-```
-
-Example:
-
-```
-1.12 → 1.00
-1.13 → 1.25
-```
-
-If `data-min` is defined, step rounding uses it as the base.
+| Attribute | ค่าเริ่มต้น | ความหมาย |
+| --- | --- | --- |
+| `data-decimal` | `2` | จำนวนทศนิยม |
+| `data-min` | ไม่กำหนด | ค่าต่ำสุด (เช็คตอน blur) |
+| `data-max` | ไม่กำหนด | ค่าสูงสุด (เช็คตอน blur) |
+| `data-step` | ไม่กำหนด | ปัดค่าเป็นช่วง step ตอน blur |
+| `data-allow-negative` | `1` | อนุญาตค่าติดลบ (`0` = ไม่อนุญาต) |
 
 ---
 
-# Allow / Disallow Negative Numbers
+## ตัวอย่างการตั้งค่าที่พบบ่อย
 
-Negative numbers are allowed by default.
+### 1) กำหนดทศนิยม 1 ตำแหน่ง
 
-Disable negative values:
+```html
+<input type="text" class="input-number-format-keyup" data-decimal="1">
+```
+
+ตัวอย่าง: `1000.5` -> `1,000.5`
+
+### 2) ไม่ใช้ทศนิยม
+
+```html
+<input type="text" class="input-number-format-keyup" data-decimal="0">
+```
+
+### 3) จำกัดช่วงค่า (Min / Max)
 
 ```html
 <input
-class="input-number-format-keyup"
-data-allow-negative="0">
+  type="text"
+  class="input-number-format-keyup"
+  data-min="0"
+  data-max="1000">
 ```
 
-Example:
+ตัวอย่าง: ใส่ `2000` แล้วออกจากช่อง จะถูกปรับเป็น `1,000.00`
 
+### 4) ปัดค่าตาม Step
+
+```html
+<input
+  type="text"
+  class="input-number-format-keyup"
+  data-step="0.25"
+  data-decimal="2">
 ```
--100 → 100
+
+ตัวอย่าง:
+
+- `1.12` -> `1.00`
+- `1.13` -> `1.25`
+
+หมายเหตุ: ถ้ากำหนด `data-min` ระบบจะใช้ `min` เป็นฐานในการคำนวณ step
+
+### 5) ไม่อนุญาตค่าติดลบ
+
+```html
+<input
+  type="text"
+  class="input-number-format-keyup"
+  data-allow-negative="0">
 ```
+
+ตัวอย่าง: `-100` -> `100`
 
 ---
 
-# Paste Handling
+## พฤติกรรมการวางข้อมูล (Paste)
 
-The script automatically cleans pasted content.
+รองรับการวางข้อความที่มีตัวอักษรปนมา เช่น:
 
-Example paste:
+`abc 1,234.56 xyz` -> `1,234.56`
 
-```
-abc 1,234.56 xyz
-```
+รองรับการวางจาก Excel (หลายเซลล์) โดยจะดึงค่าเซลล์แรกให้อัตโนมัติ เช่น:
 
-Result:
+- `1234.56\t999`
+- `1234.56` ขึ้นบรรทัดใหม่ `999`
 
-```
-1,234.56
-```
+ผลลัพธ์: `1,234.56`
 
 ---
 
-# Excel Paste Support
+## คีย์ลัดที่รองรับ
 
-When pasting data copied from Excel, multiple values may exist.
-
-Example clipboard:
-
-```
-1234.56\t999
-```
-
-or
-
-```
-1234.56
-999
-```
-
-The script automatically extracts the **first cell value**.
-
-Result:
-
-```
-1,234.56
-```
+| คีย์ลัด | การทำงาน |
+| --- | --- |
+| Ctrl/Cmd + A | เลือกข้อความทั้งหมด |
+| Ctrl/Cmd + C | คัดลอก |
+| Ctrl/Cmd + X | ตัด |
+| Ctrl/Cmd + V | วาง (พร้อมทำความสะอาดข้อมูล) |
 
 ---
 
-# Keyboard Shortcuts
+## ใช้กับ input ที่สร้างทีหลังได้เลย (AJAX/Dynamic)
 
-Supported shortcuts:
-
-| Shortcut | Behavior           |
-| -------- | ------------------ |
-| Ctrl + A | Select all text    |
-| Ctrl + C | Copy               |
-| Ctrl + X | Cut                |
-| Ctrl + V | Paste (auto clean) |
-
----
-
-# Dynamic Inputs (AJAX)
-
-Inputs created dynamically after page load work automatically.
-
-Example:
+ไม่ต้อง re-init
 
 ```javascript
 document.body.insertAdjacentHTML(
   "beforeend",
-  '<input class="input-number-format-keyup">'
+  '<input type="text" class="input-number-format-keyup">'
 );
 ```
 
-No reinitialization required.
+---
+
+## คำแนะนำสำหรับมือใหม่
+
+- ใช้ `type="text"` กับช่องนี้ (ไม่แนะนำ `type="number"` ถ้าต้องการ format เอง)
+- ใส่ `<script src="input-number-format-keyup.js"></script>` หลัง input หรือท้าย `<body>` จะเริ่มง่ายสุด
+- ถ้าต้องการค่าจริงไปคำนวณฝั่ง backend ให้ลบ comma ก่อนส่ง
 
 ---
 
-# Performance
+## ถ้าต้องการตั้งค่าเพิ่ม ควรเริ่มอย่างไร
 
-The script is optimized for performance:
+แนะนำเริ่มจาก 3 ค่าแรกก่อน:
 
-* Uses **event delegation**
-* Avoids duplicate processing
-* Updates value only when necessary
-* Moves cursor only when position changes
+1. `data-decimal` เพื่อกำหนดจำนวนทศนิยมให้ตรงธุรกิจ
+2. `data-min` / `data-max` เพื่อกันค่าหลุดช่วง
+3. `data-step` เมื่อต้องการปัดค่าเป็นหน่วย เช่น 0.25, 0.50, 1.00
 
----
-
-# Example
-
-```html
-<input
-type="text"
-class="input-number-format-keyup"
-data-decimal="2"
-data-step="0.25"
-data-min="0"
-data-max="1000"
-data-allow-negative="0">
-```
+จากนั้นค่อยเพิ่ม `data-allow-negative="0"` ในช่องที่ไม่ควรติดลบ
 
 ---
 
-# Browser Support
+## Browser Support
 
-Works in all modern browsers:
+รองรับเบราว์เซอร์สมัยใหม่:
 
-* Chrome
-* Edge
-* Firefox
-* Safari
+- Chrome
+- Edge
+- Firefox
+- Safari
 
 ---
 
-# License
+## License
 
 MIT
