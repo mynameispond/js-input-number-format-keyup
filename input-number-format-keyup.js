@@ -1,6 +1,8 @@
+/*! Input Number Format Keyup v1.0.0 */
 (function () {
 	const INFK_CLASS = "input-number-format-keyup";
 	const INFK_SELECTOR = "." + INFK_CLASS;
+	const INFK_VERSION = "1.0.0";
 	const INFK_DEFAULT_DECIMAL = 2;
 	const INFK_MAX_DECIMAL = 100;
 	const INFK_COMMA_REGEX = /,/g;
@@ -273,6 +275,26 @@
 		return str.length;
 	}
 
+	function __infkAdjustCursorValidCount(raw, formatted, validCount) {
+		if (
+			raw.charAt(0) === "." &&
+			formatted.indexOf("0.") === 0 &&
+			validCount > 0
+		) {
+			return validCount + 1;
+		}
+
+		if (
+			raw.indexOf("-.") === 0 &&
+			formatted.indexOf("-0.") === 0 &&
+			validCount > 1
+		) {
+			return validCount + 1;
+		}
+
+		return validCount;
+	}
+
 	function __infkInsertTextAtCursor(el, text) {
 		const start = el.selectionStart || 0;
 		const end = el.selectionEnd || 0;
@@ -296,12 +318,20 @@
 		const validCount = __infkCountValidCharsBeforeCursor(oldValue, oldCursor);
 		const raw = __infkSanitize(oldValue, config.decimal, config.allowNeg);
 		const formatted = __infkFormatTyping(raw, config.decimal);
+		const cursorValidCount = __infkAdjustCursorValidCount(
+			raw,
+			formatted,
+			validCount,
+		);
 
 		if (formatted !== oldValue) {
 			el.value = formatted;
 		}
 
-		const newCursor = __infkFindCursorFromValidCount(formatted, validCount);
+		const newCursor = __infkFindCursorFromValidCount(
+			formatted,
+			cursorValidCount,
+		);
 
 		if (newCursor !== oldCursor) {
 			try {
@@ -332,6 +362,37 @@
 		const key = String(e.key || "").toLowerCase();
 		return key === "a" || key === "c" || key === "x";
 	}
+
+	function __infkExposeVersion() {
+		if (typeof window !== "object" || !window) return;
+
+		const api = window.InputNumberFormatKeyup;
+		if (api && (typeof api === "object" || typeof api === "function")) {
+			api.version = INFK_VERSION;
+			return;
+		}
+
+		if (!api) {
+			window.InputNumberFormatKeyup = { version: INFK_VERSION };
+		}
+	}
+
+	function __infkDispatchInput(el) {
+		if (!el || typeof el.dispatchEvent !== "function") return;
+
+		if (typeof Event === "function") {
+			el.dispatchEvent(new Event("input", { bubbles: true }));
+			return;
+		}
+
+		if (document.createEvent) {
+			const event = document.createEvent("Event");
+			event.initEvent("input", true, false);
+			el.dispatchEvent(event);
+		}
+	}
+
+	__infkExposeVersion();
 
 	document.addEventListener("input", function (e) {
 		const el = e.target;
@@ -402,5 +463,6 @@
 
 		__infkInsertTextAtCursor(el, cleaned);
 		__infkHandleTyping(el);
+		__infkDispatchInput(el);
 	});
 })();
