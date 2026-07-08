@@ -312,6 +312,7 @@
 
 		if (formatted !== oldValue) {
 			el.value = formatted;
+			__infkDispatchInput(el);
 		}
 
 		const newCursor = __infkFindCursorFromValidCount(
@@ -340,6 +341,7 @@
 
 		if (formatted !== el.value) {
 			el.value = formatted;
+			__infkDispatchInput(el);
 		}
 	}
 
