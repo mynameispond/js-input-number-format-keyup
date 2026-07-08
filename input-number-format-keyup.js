@@ -69,6 +69,7 @@
 
 	function __infkIsTargetInput(el) {
 		if (!el || typeof el !== "object") return false;
+		if (el.type === "number") return false;
 		if (el.classList && typeof el.classList.contains === "function") {
 			return el.classList.contains(INFK_CLASS);
 		}
@@ -264,9 +265,25 @@
 		return validCount;
 	}
 
+	function __infkGetSelectionStart(el) {
+		try {
+			return el.selectionStart || 0;
+		} catch (e) {
+			return 0;
+		}
+	}
+
+	function __infkGetSelectionEnd(el) {
+		try {
+			return el.selectionEnd || 0;
+		} catch (e) {
+			return 0;
+		}
+	}
+
 	function __infkInsertTextAtCursor(el, text) {
-		const start = el.selectionStart || 0;
-		const end = el.selectionEnd || 0;
+		const start = __infkGetSelectionStart(el);
+		const end = __infkGetSelectionEnd(el);
 		const oldValue = el.value || "";
 		const newValue = oldValue.slice(0, start) + text + oldValue.slice(end);
 
@@ -283,7 +300,7 @@
 	function __infkHandleTyping(el) {
 		const config = __infkGetConfig(el);
 		const oldValue = el.value;
-		const oldCursor = el.selectionStart || 0;
+		const oldCursor = __infkGetSelectionStart(el);
 		const validCount = __infkCountValidCharsBeforeCursor(oldValue, oldCursor);
 		const raw = __infkSanitize(oldValue, config.decimal, config.allowNeg);
 		const formatted = __infkFormatTyping(raw, config.decimal);
