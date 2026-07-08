@@ -1,4 +1,4 @@
-﻿# Input Number Format Keyup (Vanilla JS)
+# Input Number Format Keyup (Vanilla JS)
 
 Version: `1.0.0`
 
@@ -173,11 +173,15 @@ document.body.insertAdjacentHTML(
 );
 ```
 
+### การทำงานร่วมกับ React / Vue / Alpine.js (State Synchronization)
+
+ระบบจะทำการยิง (Dispatch) Event `input` ออกมาเสมอหลังการจัดฟอร์แมตข้อมูลเสร็จสิ้น ทั้งในขณะที่พิมพ์และเมื่อออกจากช่องโฟกัส (Blur) ทำให้สามารถเชื่อมโยงข้อมูลแบบ Two-way binding หรือเก็บในตัวแปร State ของ Framework ยุคใหม่ได้โดยที่ข้อมูลไม่หลุดการซิงก์
+
 ---
 
 ## คำแนะนำสำหรับมือใหม่
 
-- ใช้ `type="text"` กับช่องนี้ (ไม่แนะนำ `type="number"` ถ้าต้องการ format เอง)
+- ใช้ `type="text"` กับช่องนี้ (ไม่รองรับ `type="number"` เนื่องจากระบบจะข้ามการประมวลผลเพื่อป้องกันข้อผิดพลาดหน้าเว็บล่ม)
 - ใส่ `<script src="input-number-format-keyup.js"></script>` หลัง input หรือท้าย `<body>` จะเริ่มง่ายสุด
 - ถ้าต้องการค่าจริงไปคำนวณฝั่ง backend ให้ลบ comma ก่อนส่ง
 
