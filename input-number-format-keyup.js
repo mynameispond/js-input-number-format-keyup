@@ -117,44 +117,13 @@
 		return out;
 	}
 
-	function __infkCountChar(str, code) {
-		let count = 0;
-		for (let i = 0; i < str.length; i++) {
-			if (str.charCodeAt(i) === code) {
-				count++;
-			}
-		}
-		return count;
-	}
-
 	function __infkSanitizePastedText(text, decimal, allowNeg) {
 		text = String(text || "").trim();
 		text = text.split(INFK_PASTE_NEWLINE_SPLIT_REGEX)[0];
 		text = text.split("\t")[0];
 		text = text.replace(INFK_PASTE_SPACE_REGEX, "");
 		text = text.replace(INFK_PASTE_ALLOWED_CHAR_REGEX, "");
-
-		const hasComma = text.indexOf(",") !== -1;
-		const hasDot = text.indexOf(".") !== -1;
-
-		if (hasComma && hasDot) {
-			text = text.replace(INFK_COMMA_REGEX, "");
-		} else if (hasComma) {
-			const commaCount = __infkCountChar(text, 44);
-
-			if (commaCount === 1 && decimal > 0) {
-				const parts = text.split(",");
-				const right = parts[1] || "";
-
-				if (right.length > 0 && right.length <= decimal) {
-					text = parts[0] + "." + right;
-				} else {
-					text = text.replace(INFK_COMMA_REGEX, "");
-				}
-			} else {
-				text = text.replace(INFK_COMMA_REGEX, "");
-			}
-		}
+		text = text.replace(INFK_COMMA_REGEX, "");
 
 		return __infkSanitize(text, decimal, allowNeg);
 	}
